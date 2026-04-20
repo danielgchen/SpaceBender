@@ -37,7 +37,32 @@ spacebender.run_spacebender(
     random_seed=0)
 ```
 
+Example Python code to run SpaceBender on Google CoLab:
+```
+# install packages
+!pip3 install torch torchvision --index-url https://download.pytorch.org/whl/cu130
+!pip install pyro-ppl scanpy tables seaborn matplotlib
+!git clone https://github.com/danielgchen/SpaceBender.git
 
+# import local SpaceBender package
+from SpaceBender import spacebender
+# upload your H5AD file then run!
+input_file = '<EXAMPLE_H5AD_FILENAME>'
+output_file = input_file.replace('.h5ad','.OUT.h5ad') # rename however you wish!
+spacebender.run_spacebender(
+    input_file=input_file,
+    output_file=output_file,
+    k_neighbors=<N_NEIGHBORS, e.g. 6 or None (if using distance-based method)>,
+    ambient_radius=<RADIUS, e.g. 100>,
+    n_epochs=<N_EPOCHS, e.g. 100>,
+    batch_size=<BATCH_SIZE, e.g. 256>,
+    learning_rate=<LEARNING_RATE, e.g. 1e-3>,
+    z_dim=<HIDDEN_DIMENSIONS, e.g. 64>,
+    n_posterior_samples=<N_SAMPLES, e.g. 25>,
+    device=<DEVICE, e.g. 'cpu' or 'cuda'>,
+    train_in_tissue_only=False,
+    random_seed=0)
+```
 
 ## Licensure
 The original, in vast majority unmodified, CellBender code is located in the `remove_background`  and is under its original BSD-3 license. SpaceBender is under a BSD-3 Clear license in the top-level directory.
