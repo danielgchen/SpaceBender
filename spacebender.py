@@ -331,7 +331,7 @@ class SpatialRemoveBackgroundModel(nn.Module):
         self.loss = {'train': {'epoch': [], 'elbo': []},
                      'test':  {'epoch': [], 'elbo': []},
                      'learning_rate': {'epoch': [], 'value': []}}
-        
+
     def model(
             self,
             x: torch.Tensor,
@@ -569,7 +569,7 @@ def train_spatial_model(
         batch_size: int = 128,
         learning_rate: float = 1e-3,
         device: str = 'cpu',
-        train_in_tissue_only: bool = True,
+        train_in_tissue_only: bool = False,
 ) -> SpatialRemoveBackgroundModel:
     """
     train the spatial denoising model
@@ -682,11 +682,19 @@ def sample_denoised_counts(
 
     # assemble denoised matrix
     all_rows, all_cols, all_vals = [], [], []
-    for start in range(0, n_spots, batch_size):
-        end = min(start + batch_size, n_spots)
+    # encoder cannot process a batch of one so fold into the previous batch
+    bounds = [(s, min(s + batch_size, n_spots)) for s in range(0, n_spots, batch_size)]
+    if len(bounds) > 1 and bounds[-1][1] - bounds[-1][0] < 2:
+        bounds[-2] = (bounds[-2][0], bounds[-1][1])
+        bounds.pop()
+    for start, end in bounds:
         batch_inds = np.arange(start, end)
         B = len(batch_inds)
         x_np = np.array(count_matrix[batch_inds, :].todense(), dtype=np.float32)
+        # skip computation if the batch is completely empty (cannot remove noise from nothing)
+        if not x_np.any():
+            logger.info(f"  Skipping empty batch: spots {start}-{end - 1} have no counts.")
+            continue
         x_batch = torch.tensor(x_np, device=device)
         chi_batch = chi_amb_full[batch_inds, :]
         t_batch = in_tissue_full[batch_inds]
@@ -876,7 +884,7 @@ def run_spacebender(
         hidden_dims: List[int] = [512, 512],
         n_posterior_samples: int = 25,
         device: str = 'cpu',
-        train_in_tissue_only: bool = True,
+        train_in_tissue_only: bool = False,
         random_seed: int = 1234,
         lambda_multiplier: float = 1.0,
         use_map: bool = True,
@@ -980,7 +988,7 @@ if __name__ == '__main__':
     parser.add_argument('--lambda-multiplier', type=float, default=1.0, help='Ambient noise rate scaling factor for posterior sampling')
     parser.add_argument('--use-sample', action='store_true', help='Draw a stochastic posterior sample rather than the MAP (argmax) estimate.')
     parser.add_argument('--device', type=str, default='cpu', choices=['cpu', 'cuda'], help="Where to perform computations")
-    parser.add_argument('--train-all-spots', action='store_true', help='Train on all spots, not just in-tissue ones (recommended)')
+    parser.add_argument('--train-in-tissue-only', action='store_true', help='Train on in tissue spots only (not recommended)')
     parser.add_argument('--seed', type=int, default=1234)
     args = parser.parse_args()
 
@@ -995,7 +1003,7 @@ if __name__ == '__main__':
         z_dim=args.z_dim,
         n_posterior_samples=args.n_posterior_samples,
         device=args.device,
-        train_in_tissue_only=not args.train_all_spots,
+        train_in_tissue_only=args.train_in_tissue_only,
         random_seed=args.seed,
         lambda_multiplier=args.lambda_multiplier,
         use_map=not args.use_sample,

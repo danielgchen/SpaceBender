@@ -21,7 +21,6 @@ from SpaceBender.remove_background.estimation import MultipleChoiceKnapsack, \
 from SpaceBender.remove_background.exceptions import ElboException
 from SpaceBender.remove_background.sparse_utils import csr_set_rows_to_zero
 from SpaceBender.remove_background.data.io import write_matrix_to_cellranger_h5
-from SpaceBender.remove_background.report import run_notebook_make_html, plot_summary
 from SpaceBender.remove_background.checkpoint import create_workflow_hashcode
 
 import pyro
@@ -127,16 +126,6 @@ def run_remove_background(args: argparse.Namespace) -> Posterior:
         )
         logger.info(datetime.now().strftime('%Y-%m-%d %H:%M:%S\n'))
 
-        # Save output plots.
-        save_output_plots(
-            file_dir=file_dir,
-            file_name=file_name,
-            dataset_obj=dataset_obj,
-            inferred_model=inferred_model,
-            p=posterior.latents_map['p'],
-            z=posterior.latents_map['z'],
-        )
-
         # Save cell barcodes in a CSV file.
         analyzed_barcode_logic = (posterior.latents_map['p'] > consts.CELL_PROB_CUTOFF)
         cell_barcodes = (dataset_obj.data['barcodes']
@@ -175,31 +164,6 @@ def run_remove_background(args: argparse.Namespace) -> Posterior:
             os.remove(filtered_file)
 
         logger.info("Keyboard interrupt.  Terminated without saving.\n")
-
-
-def save_output_plots(file_dir: str,
-                      file_name: str,
-                      dataset_obj: SingleCellRNACountsDataset,
-                      inferred_model: RemoveBackgroundPyroModel,
-                      p: np.ndarray,
-                      z: np.ndarray) -> bool:
-    """Save the UMI histogram and the three-panel output summary PDF"""
-
-    try:
-        # File naming.
-        summary_fig_name = os.path.join(file_dir, file_name + ".pdf")
-
-        # Three-panel output summary plot.
-        counts = np.array(dataset_obj.get_count_matrix().sum(axis=1)).squeeze()
-        fig = plot_summary(loss=inferred_model.loss, umi_counts=counts, p=p, z=z)
-        fig.savefig(summary_fig_name, bbox_inches='tight', format='pdf')
-        logger.info(f"Saved summary plots as {summary_fig_name}")
-        return True
-
-    except Exception:
-        logger.warning("Unable to save all plots.")
-        logger.warning(traceback.format_exc())
-        return False
 
 
 def compute_output_denoised_counts_reports_metrics(posterior: Posterior,
@@ -359,23 +323,6 @@ def compute_output_denoised_counts_reports_metrics(posterior: Posterior,
             logger.info(f'Saved output metrics as {metrics_file_name}')
         except Exception:
             logger.warning("Unable to collect output metrics.")
-            logger.warning(traceback.format_exc())
-
-        # Create report.
-        try:
-            os.environ['INPUT_FILE'] = os.path.abspath(os.path.join(os.getcwd(), args.input_file))
-            os.environ['OUTPUT_FILE'] = os.path.abspath(os.path.join(os.getcwd(), fpr_output_filename))
-            if args.truth_file is not None:
-                os.environ['TRUTH_FILE'] = os.path.abspath(os.path.join(os.getcwd(), args.truth_file))
-            html_report_file = os.path.join(file_dir, file_name + name_suffix + '_report.html')
-            run_notebook_make_html(
-                file=os.path.abspath(os.path.join(os.path.dirname(__file__), 'report.ipynb')),
-                output=html_report_file,
-            )
-            logger.info(f'Succeeded in writing report to {html_report_file}')
-
-        except Exception:
-            logger.warning("Unable to create report.")
             logger.warning(traceback.format_exc())
 
     return success

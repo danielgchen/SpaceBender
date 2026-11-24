@@ -6,16 +6,23 @@
     <br>
     fashion and is based on existing single-cell denoising architecture.
     <br>
-    See our manuscript at <a href="google.com">bioRxiv</a> for more information.
+    See our manuscript at <a href="https://www.biorxiv.org/content/10.64898/2026.04.20.719715v1">bioRxiv</a> for more information.
 </p>
+
+## Package Requirements
+Suggested requirements are provided in the `requirements.txt` file which can be installed in the user's local environment via `pip install -r requirements.txt`. We recommend users to create a separate Python environment to host SpaceBender (e.g. Python version ≥3.12).
+
+## Tutorial Notebook
+We provide a step-by-step tutorial notebook in this repository at **tutorials/Tutorial.ipynb**. The tutorial comes with a toy dataset (small enough to run on CPU on local computers) and instructions for how users can run SpaceBender for their own spatial transcriptomics data (e.g. usage notes and detailed guidance).
 
 ## Quick Usage
 Example Python code to run SpaceBender, e.g. in a Jupyter notebook:
 ```
 # import SpaceBender package, attach to path via "sys" package
+# NOTE: add the folder that CONTAINS the cloned `SpaceBender` folder (the folder must be named `SpaceBender`)
 import sys
-sys.path.insert(0, '/path/to/<PACKAGE>')
-from <PACKAGE> import spacebender
+sys.path.insert(0, '/path/to/parent_of_SpaceBender')
+from SpaceBender import spacebender
 
 # define the paths of the input and output H5AD files
 input_file = '/path/to/data/NAME.h5ad'
@@ -41,7 +48,7 @@ Example Python code to run SpaceBender on Google CoLab:
 ```
 # install packages
 !pip3 install torch torchvision --index-url https://download.pytorch.org/whl/cu130
-!pip install pyro-ppl scanpy tables seaborn matplotlib
+!pip install pandas==2.2.3 pyro-ppl scanpy tables seaborn matplotlib
 !git clone https://github.com/danielgchen/SpaceBender.git
 
 # import local SpaceBender package
